@@ -111,6 +111,7 @@
     position: relative;
     transform-style: preserve-3d;
     transition: transform 0.7s cubic-bezier(.4,0,.2,1);
+    flex-shrink: 0; /* flex 컨테이너가 카드 폭을 임의로 찌그러뜨리지 않도록 고정 (모바일 잘림 버그 수정) */
   }
   #card-wrapper.flipped { transform: rotateY(180deg); }
 
