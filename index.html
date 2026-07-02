@@ -22,12 +22,20 @@
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
-    min-height: 100vh;
+    height: 100vh;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
     background: var(--bg-color);
     font-family: var(--font-main);
     user-select: none;
-    overflow-x: hidden;
+    overflow: hidden;
+    box-sizing: border-box;
+    padding-top: 70px; /* JS(applyCardSize)가 실제 툴바 높이로 바로 갱신함 */
+  }
+  /* 모바일에서는 카드가 화면보다 커질 수 있어 페이지 자체 스크롤을 허용 */
+  body.mobile-view {
+    height: auto;
+    min-height: 100vh;
+    overflow-y: auto;
   }
   body::before {
     content: '';
@@ -76,7 +84,6 @@
   /* ── 카드 씬 ── */
   #card-scene {
     perspective: 1200px;
-    margin-top: 70px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -106,7 +113,13 @@
     padding: 28px 24px 20px;
     display: flex; flex-direction: column; align-items: center; gap: 10px;
     height: 100%;
+    box-sizing: border-box;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: none;      /* Firefox */
+    -ms-overflow-style: none;   /* IE/Edge */
   }
+  #front-inner::-webkit-scrollbar { display: none; }  /* Chrome/Safari */
   #front-title-wrap { width: 100%; text-align: center; }
   #front-title {
     font-size: 22px; font-weight: bold; color: var(--title-color);
@@ -941,7 +954,7 @@ function initMobileMode() {
   applyMobileMode();
   if (mobileMQ.addEventListener) mobileMQ.addEventListener('change', applyMobileMode);
   else mobileMQ.addListener(applyMobileMode); // 구형 브라우저 대응
-  window.addEventListener('resize', () => { updateMobileScenePadding(); applyMobileScale(); });
+  window.addEventListener('resize', () => { updateMobileScenePadding(); applyCardSize(); });
 }
 
 // ══════════════════════════════════════════════
@@ -995,7 +1008,7 @@ function setAdminMode(on) {
   document.querySelectorAll('.box-body').forEach(el => { el.contentEditable = on ? 'true' : 'false'; });
   document.querySelectorAll('.free-text').forEach(el => { el.contentEditable = on ? 'true' : 'false'; });
   document.querySelectorAll('.box-title-edit').forEach(el => { el.readOnly = !on; });
-  setTimeout(updateMobileScenePadding, 0);
+  setTimeout(() => { updateMobileScenePadding(); applyCardSize(); }, 0);
 }
 
 function adminLogout() {
@@ -1040,19 +1053,36 @@ function applyCardSize() {
   const backH = (curPage && typeof curPage.cardH === 'number') ? curPage.cardH : backCardSize.h;
   const width  = isFlipped ? backCardSize.w : frontCardSize.w;
   const height = isFlipped ? backH : frontCardSize.h;
-  w.style.width  = width + 'px';
-  w.style.height = height + 'px';
   // card-scene perspective 고정 (모든 페이지 높이 중 최대값 기준으로 씬 크기 확보)
   const scene = document.getElementById('card-scene');
   const isMobile = document.body.classList.contains('mobile-view');
   if (!isMobile) {
+    // 상단 툴바 높이만큼 body에 여백을 줘서, 그 아래 남은 영역 안에서
+    // 카드가 스크롤 없이 항상 정중앙에 오도록 한다.
+    const topbar = document.getElementById('topbar');
+    const topbarH = topbar ? topbar.offsetHeight : 0;
+    document.body.style.paddingTop = topbarH + 'px';
+
+    // 실제로 화면에 쓸 수 있는 높이/너비 (여유 여백 확보)
+    const availH = Math.max(200, window.innerHeight - topbarH - 32);
+    const availW = Math.max(200, window.innerWidth - 32);
+
+    // 카드 자체는 화면을 넘지 않도록 제한하고, 그보다 긴 내용은
+    // 카드 내부(.page / #front-inner)의 스크롤로만 보이게 한다.
+    w.style.width  = Math.min(width, availW) + 'px';
+    w.style.height = Math.min(height, availH) + 'px';
+
     const allBackH = pages.map(p => (typeof p.cardH === 'number') ? p.cardH : backCardSize.h);
     const maxH = Math.max(frontCardSize.h, backCardSize.h, ...allBackH);
-    scene.style.width  = Math.max(frontCardSize.w, backCardSize.w) + 'px';
-    scene.style.height = maxH + 'px';
+    const maxW = Math.max(frontCardSize.w, backCardSize.w);
+    scene.style.width  = Math.min(maxW, availW) + 'px';
+    scene.style.height = Math.min(maxH, availH) + 'px';
   } else {
-    // 모바일에서는 scene 너비를 화면 폭(100%)에 맡기고,
-    // 높이는 applyMobileScale이 축소 비율에 맞춰 다시 계산한다.
+    // 모바일에서는 body/scene 여백을 별도 로직(updateMobileScenePadding)이 담당하고,
+    // 카드 폭/높이는 원본 크기 그대로 두었다가 applyMobileScale이 화면 폭에 맞춰 축소한다.
+    document.body.style.paddingTop = '';
+    w.style.width  = width + 'px';
+    w.style.height = height + 'px';
     scene.style.width = '';
     scene.style.height = '';
   }
