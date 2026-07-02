@@ -106,6 +106,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    transform: scale(var(--desktop-scale, 1));
+    transform-origin: center center;
   }
   #card-wrapper {
     position: relative;
@@ -1020,8 +1022,7 @@ function applyMobileScale() {
   if (!scene || !wrapper) return;
   if (!document.body.classList.contains('mobile-view')) {
     wrapper.style.removeProperty('--mobile-scale');
-    scene.style.height = '';
-    return; // 데스크톱 높이(applyCardSize가 설정)는 그대로 둔다
+    return; // 데스크톱 크기(applyCardSize가 --desktop-scale과 함께 이미 설정함)는 그대로 둔다
   }
   const topbar = document.getElementById('topbar');
   const topbarH = topbar ? topbar.offsetHeight : 0;
@@ -1155,16 +1156,20 @@ function applyCardSize() {
     const availH = Math.max(200, window.innerHeight - topbarH - 32);
     const availW = Math.max(200, window.innerWidth - 32);
 
-    // 카드 자체는 화면을 넘지 않도록 제한하고, 그보다 긴 내용은
-    // 카드 내부(.page / #front-inner)의 스크롤로만 보이게 한다.
-    w.style.width  = Math.min(width, availW) + 'px';
-    w.style.height = Math.min(height, availH) + 'px';
+    // 카드(및 내부 박스들)는 원본 디자인 크기 그대로 유지하고, 화면보다 크면
+    // #card-scene 전체를 scale()로 축소해서 보여준다 (내부 박스/이미지가
+    // 카드 틀 밖으로 잘리지 않고 통째로 작게 보이는 방식 — 모바일과 동일한 원리).
+    w.style.width  = width + 'px';
+    w.style.height = height + 'px';
 
     const allBackH = pages.map(p => (typeof p.cardH === 'number') ? p.cardH : backCardSize.h);
     const maxH = Math.max(frontCardSize.h, backCardSize.h, ...allBackH);
     const maxW = Math.max(frontCardSize.w, backCardSize.w);
-    scene.style.width  = Math.min(maxW, availW) + 'px';
-    scene.style.height = Math.min(maxH, availH) + 'px';
+
+    const scale = Math.min(1, availW / maxW, availH / maxH);
+    scene.style.setProperty('--desktop-scale', scale);
+    scene.style.width  = Math.round(maxW * scale) + 'px';
+    scene.style.height = Math.round(maxH * scale) + 'px';
   } else {
     // 모바일에서는 body 상단 여백을 별도 로직(updateMobileScenePadding)이 담당하고,
     // 카드 폭/높이는 원본 크기 그대로 두었다가 applyMobileScale이 화면 폭+높이에
@@ -1173,6 +1178,7 @@ function applyCardSize() {
     w.style.width  = width + 'px';
     w.style.height = height + 'px';
     scene.style.width = '';
+    scene.style.removeProperty('--desktop-scale');
   }
   applyMobileScale();
 }
@@ -1939,7 +1945,11 @@ function renderFreeText(parentEl, f, pageIdx) {
   el.className = 'free-text';
   el.contentEditable = isAdmin ? 'true' : 'false';
   el.innerHTML = f.text;
-  el.style.cssText = `left:${f.x}px;top:${f.y}px;font-size:${f.fontSize}px;color:${f.color}`;
+  // 카드 폭을 벗어나 옆으로 계속 뻗어나가지 않도록, 텍스트 시작 위치(f.x) 기준으로
+  // 카드 안쪽에 들어올 수 있는 최대 폭을 max-width로 제한해서 줄바꿈되게 한다.
+  const pad = 10;
+  const maxTextW = Math.max(60, backCardSize.w - f.x - pad);
+  el.style.cssText = `left:${f.x}px;top:${f.y}px;font-size:${f.fontSize}px;color:${f.color};max-width:${maxTextW}px;`;
 
   el.addEventListener('input', () => { f.text = el.innerHTML; markDirty(); });
 
@@ -1976,10 +1986,15 @@ function renderFreeText(parentEl, f, pageIdx) {
 // 모바일에서는 카드 전체가 scale()로 축소되어 있으므로,
 // 마우스/터치 이동량(px)을 실제 좌표 단위로 환산할 때 이 배율로 나눠줘야 한다.
 function currentScaleFactor() {
-  if (!document.body.classList.contains('mobile-view')) return 1;
-  const wrapper = document.getElementById('card-wrapper');
-  if (!wrapper) return 1;
-  const v = parseFloat(getComputedStyle(wrapper).getPropertyValue('--mobile-scale'));
+  if (document.body.classList.contains('mobile-view')) {
+    const wrapper = document.getElementById('card-wrapper');
+    if (!wrapper) return 1;
+    const v = parseFloat(getComputedStyle(wrapper).getPropertyValue('--mobile-scale'));
+    return (v && v > 0) ? v : 1;
+  }
+  const scene = document.getElementById('card-scene');
+  if (!scene) return 1;
+  const v = parseFloat(getComputedStyle(scene).getPropertyValue('--desktop-scale'));
   return (v && v > 0) ? v : 1;
 }
 
