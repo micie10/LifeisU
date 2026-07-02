@@ -733,9 +733,11 @@
 
 <!-- ══ 컨텍스트 메뉴 ══ -->
 <div id="ctx-menu">
-  <div class="ctx-item" onclick="ctxAction('color')">🎨 배경색 변경</div>
-  <div class="ctx-item" onclick="ctxAction('textcolor')">✏️ 글자색 변경</div>
-  <div class="ctx-item" onclick="ctxAction('img')">🖼 이미지 삽입</div>
+  <div class="ctx-item box-only" onclick="ctxAction('color')">🎨 배경색 변경</div>
+  <div class="ctx-item box-only" onclick="ctxAction('bordercolor')">🖌️ 테두리 색상 변경</div>
+  <div class="ctx-item box-only" onclick="ctxAction('titlecolor')">🏷️ 제목 글자색 변경</div>
+  <div class="ctx-item" onclick="ctxAction('textcolor')">✏️ 내용 글자색 변경</div>
+  <div class="ctx-item box-only" onclick="ctxAction('img')">🖼 이미지 삽입</div>
   <div class="ctx-sep"></div>
   <div class="ctx-item" onclick="ctxAction('moveUp')">⬆ 순서 위로 (모바일 배치)</div>
   <div class="ctx-item" onclick="ctxAction('moveDown')">⬇ 순서 아래로 (모바일 배치)</div>
@@ -1441,6 +1443,8 @@ function addBoxPrompt(type) {
     body: '', x: 20, y: 50, w: 160, h: 90,
     bg: type === 'code' ? '#1e1e2e' : '#fff8f8',
     fg: type === 'code' ? '#cdd6f4' : '#4a1070',
+    titleColor: type === 'code' ? '#cdd6f4' : '#9a7020',
+    borderColor: type === 'code' ? '#3a3a52' : '#e0c880',
     img: null,
     order: Date.now()
   });
@@ -1453,7 +1457,9 @@ function renderBox(parentEl, b, pageIdx) {
   el.className = 'back-box';
   el.dataset.boxId = b.id;
   el.dataset.pageIdx = pageIdx;
-  el.style.cssText = `left:${b.x}px;top:${b.y}px;width:${b.w}px;height:${b.h}px;background:${b.bg};color:${b.fg};`;
+  const borderColor = b.borderColor || '#e0c880';
+  const titleColor  = b.titleColor  || '#9a7020';
+  el.style.cssText = `left:${b.x}px;top:${b.y}px;width:${b.w}px;height:${b.h}px;background:${b.bg};border-color:${borderColor};`;
 
   // 이미지
   const imgHtml = b.img ? `<img class="back-box-img" src="${b.img}" alt="">` : '';
@@ -1461,14 +1467,14 @@ function renderBox(parentEl, b, pageIdx) {
   const copyBtnHtml = b.type === 'code' ? `<button class="copy-btn" onclick="copyBoxCode(this)">복사</button>` : '';
 
   el.innerHTML = `
-    <div class="box-header">
+    <div class="box-header" style="color:${titleColor}">
       <input class="box-title-edit" value="${escHtml(b.title)}" ${isAdmin?'':'readonly'}>
       <div style="display:flex;gap:2px">
         ${isAdmin ? `<button class="box-ctrl-btn editable-hide" title="우클릭으로 옵션" onclick="openBoxCtxMenu(event, '${b.id}', ${pageIdx})">⋮</button>` : ''}
       </div>
     </div>
     ${copyBtnHtml}
-    <div class="box-body ${b.type==='code'?'code-body':''}" contenteditable="${isAdmin}">${escHtml(b.body)}</div>
+    <div class="box-body ${b.type==='code'?'code-body':''}" style="color:${b.fg}" contenteditable="${isAdmin}">${escHtml(b.body)}</div>
     ${imgHtml}
     ${isAdmin ? '<div class="resize-handle editable-hide"></div>' : ''}
   `;
@@ -1846,6 +1852,8 @@ function getPageRect(pageIdx) {
 // ══════════════════════════════════════════════
 function showCtxMenu(x, y) {
   const menu = document.getElementById('ctx-menu');
+  const isBox = ctxTarget && ctxTarget.type === 'box';
+  menu.querySelectorAll('.box-only').forEach(el => { el.style.display = isBox ? '' : 'none'; });
   menu.style.display = 'block';
   menu.style.left = x + 'px'; menu.style.top = y + 'px';
 }
@@ -1912,6 +1920,16 @@ function ctxAction(action) {
       const picker = document.getElementById('ctx-color-picker');
       picker.value = rgbToHex(box.fg) || '#000000';
       picker.onchange = () => { box.fg = picker.value; renderPages(); markDirty(); };
+      picker.click();
+    } else if (action === 'titlecolor') {
+      const picker = document.getElementById('ctx-color-picker');
+      picker.value = box.titleColor || '#9a7020';
+      picker.onchange = () => { box.titleColor = picker.value; renderPages(); markDirty(); };
+      picker.click();
+    } else if (action === 'bordercolor') {
+      const picker = document.getElementById('ctx-color-picker');
+      picker.value = box.borderColor || '#e0c880';
+      picker.onchange = () => { box.borderColor = picker.value; renderPages(); markDirty(); };
       picker.click();
     } else if (action === 'img') {
       const fp = document.getElementById('ctx-img-picker');
