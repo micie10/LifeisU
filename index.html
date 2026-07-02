@@ -480,6 +480,90 @@
   #ctx-menu .ctx-item:hover { background: #f0e0ff; }
   #ctx-menu .ctx-item.danger { color: #c00; }
   #ctx-menu .ctx-sep { height: 1px; background: #e8d0ff; margin: 3px 0; }
+
+  /* ══════════════════════════════════════════════
+     모바일 반응형 – 카드 자체가 화면에 맞춰 줄어들고
+     뒷면 박스들은 절대좌표 대신 순서대로 세로로 쌓임
+     ══════════════════════════════════════════════ */
+  body.mobile-view #card-scene {
+    width: 100%;
+    padding: 66px 12px 40px;
+    box-sizing: border-box;
+    height: auto;
+  }
+  body.mobile-view #card-wrapper {
+    width: min(94vw, 420px) !important;
+    height: auto !important;
+    transform: none !important;
+    transition: none !important;
+  }
+  body.mobile-view .card-face {
+    position: relative !important;
+    width: 100% !important;
+    height: auto !important;
+    backface-visibility: visible !important;
+  }
+  body.mobile-view #card-front { display: block; }
+  body.mobile-view #card-back  { display: none; }
+  body.mobile-view #card-wrapper.flipped #card-front { display: none; }
+  body.mobile-view #card-wrapper.flipped #card-back  { display: block; }
+
+  body.mobile-view #front-inner { padding: 22px 18px 10px; }
+  body.mobile-view #flip-btn-front,
+  body.mobile-view #flip-btn-back {
+    position: static !important;
+    display: block;
+    width: max-content;
+    margin: 18px auto 0;
+  }
+
+  body.mobile-view #back-inner {
+    position: relative !important;
+    height: auto !important;
+    padding: 12px 0 20px;
+  }
+  body.mobile-view #pages-container {
+    height: auto !important;
+    align-items: flex-start;
+  }
+  body.mobile-view .page {
+    height: auto !important;
+    overflow: visible !important;
+  }
+  body.mobile-view .page-content {
+    position: relative !important;
+    height: auto !important;
+    padding: 6px 14px;
+    box-sizing: border-box;
+  }
+  /* 박스: 절대좌표 → 순서대로 세로 스택 */
+  body.mobile-view .back-box {
+    position: static !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0;
+    margin: 0 0 12px;
+    box-sizing: border-box;
+  }
+  body.mobile-view .back-box .box-body { max-height: none; overflow: visible; }
+  body.mobile-view .back-box-img { max-height: 160px; }
+  /* 자유 텍스트도 순서대로 세로 스택 */
+  body.mobile-view .free-text {
+    position: static !important;
+    display: block;
+    width: 100% !important;
+    margin: 0 0 10px;
+  }
+  /* 스티커는 절대좌표 기반이라 재배치된 레이아웃과 어긋나므로 모바일에선 숨김 */
+  body.mobile-view .page .sticker { display: none !important; }
+  /* 편집용 리사이즈 핸들은 모바일에서 의미 없으므로 숨김 */
+  body.mobile-view .resize-handle,
+  body.mobile-view #card-resize-handle { display: none !important; }
+  /* 좌우 화살표 대신 탭/인디케이터로 페이지 전환 */
+  body.mobile-view #page-prev,
+  body.mobile-view #page-next,
+  body.mobile-view #page-indicator { display: none !important; }
+  body.mobile-view #page-tabs { position: static; margin: 0 auto 14px; transform: none; left: auto; top: auto; }
 </style>
 </head>
 <body class="visitor">
@@ -730,6 +814,9 @@ let ctxTarget  = null;   // 우클릭 타겟
 
 // ──────── 초기화 ────────
 function init() {
+  // 모바일 반응형 모드 감지 및 적용
+  initMobileMode();
+
   // 기본 페이지 1개
   pages = [{
     boxes: [
@@ -745,6 +832,22 @@ function init() {
   loadStateFromStorage();
   // 2) 그리고 항상 Gist에서 최신 데이터를 불러와 덮어씀 (방문자 포함 전원)
   loadFromGist({ silent: true });
+}
+
+// ══════════════════════════════════════════════
+//  모바일 반응형 모드
+//  화면이 좁으면(≈모바일) 카드가 가로/세로로 자연스럽게
+//  줄어들고, 뒷면 박스는 절대좌표 대신 추가한 순서대로
+//  세로로 차례차례 쌓여서 보여지도록 전환한다.
+// ══════════════════════════════════════════════
+const mobileMQ = window.matchMedia('(max-width: 640px)');
+function applyMobileMode() {
+  document.body.classList.toggle('mobile-view', mobileMQ.matches);
+}
+function initMobileMode() {
+  applyMobileMode();
+  if (mobileMQ.addEventListener) mobileMQ.addEventListener('change', applyMobileMode);
+  else mobileMQ.addListener(applyMobileMode); // 구형 브라우저 대응
 }
 
 // ══════════════════════════════════════════════
