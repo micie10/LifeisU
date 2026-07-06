@@ -735,7 +735,7 @@
   <div class="ctx-item box-only" onclick="ctxAction('titlecolor')">🏷️ 제목 글자색 변경</div>
   <div class="ctx-item" onclick="ctxAction('textcolor')">✏️ 내용 글자색 변경</div>
   <div class="ctx-item box-only" onclick="ctxAction('img')">🖼 이미지 삽입</div>
-  <div class="ctx-item box-only" onclick="ctxAction('link')">🔗 링크 설정/변경</div>
+  <div class="ctx-item link-target" onclick="ctxAction('link')">🔗 링크(URL) 설정/변경</div>
   <div class="ctx-sep box-only"></div>
   <div class="ctx-item box-only" onclick="ctxAction('spacingUp')">↕️ 문단 간격 넓게</div>
   <div class="ctx-item box-only" onclick="ctxAction('spacingDown')">↕️ 문단 간격 좁게</div>
@@ -2098,7 +2098,9 @@ function getPageRect(pageIdx) {
 function showCtxMenu(x, y) {
   const menu = document.getElementById('ctx-menu');
   const isBox = ctxTarget && ctxTarget.type === 'box';
+  const isSticker = ctxTarget && ctxTarget.type === 'sticker';
   menu.querySelectorAll('.box-only').forEach(el => { el.style.display = isBox ? '' : 'none'; });
+  menu.querySelectorAll('.link-target').forEach(el => { el.style.display = (isBox || isSticker) ? '' : 'none'; });
   menu.style.display = 'block';
   menu.style.left = x + 'px'; menu.style.top = y + 'px';
 }
@@ -2181,6 +2183,18 @@ function ctxAction(action) {
     return;
   }
 
+  if (action === 'link') {
+    let obj;
+    if (type === 'box') obj = pages[pageIdx].boxes.find(b => b.id === id);
+    else if (type === 'sticker') obj = pages[pageIdx].stickers.find(s => s.id === id);
+    if (!obj) return;
+    const val = prompt('클릭 시 이동할 링크 (비워두고 확인하면 삭제됩니다)', obj.link || '');
+    if (val === null) return;
+    obj.link = val.trim();
+    renderPages(); markDirty();
+    return;
+  }
+
   if (type === 'box') {
     const box = pages[pageIdx].boxes.find(b => b.id === id);
     if (!box) return;
@@ -2214,11 +2228,6 @@ function ctxAction(action) {
       insertImageVia('ctx-img-picker', u => {
         box.img = u; renderPages(); markDirty();
       }, '박스 이미지 URL을 입력하세요');
-    } else if (action === 'link') {
-      const val = prompt('클릭 시 이동할 링크 (비워두고 확인하면 삭제됩니다)', box.link || '');
-      if (val === null) return;
-      box.link = val.trim();
-      renderPages(); markDirty();
     }
   }
   if (type === 'freeText') {
