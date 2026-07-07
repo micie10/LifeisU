@@ -675,6 +675,8 @@
           <input type="file" id="icon1-input" accept="image/*" style="display:none" onchange="setIconImg(event,'icon1')">
           <div class="front-icon" id="icon2" onclick="isAdmin&&openIconImgPicker('icon2')" title="아이콘2">⭐</div>
           <input type="file" id="icon2-input" accept="image/*" style="display:none" onchange="setIconImg(event,'icon2')">
+          <div class="front-icon" id="icon3" onclick="isAdmin&&openIconImgPicker('icon3')" title="아이콘3">💫</div>
+          <input type="file" id="icon3-input" accept="image/*" style="display:none" onchange="setIconImg(event,'icon3')">
         </div>
       </div>
       <button id="flip-btn-front" onclick="flipCard()">뒤집기 ↩</button>
@@ -2363,6 +2365,7 @@ function collectState() {
       profileImg: (document.getElementById('profile-img-container').querySelector('img') || {}).src || null,
       icon1: document.getElementById('icon1').querySelector('img') ? document.getElementById('icon1').querySelector('img').src : document.getElementById('icon1').textContent,
       icon2: document.getElementById('icon2').querySelector('img') ? document.getElementById('icon2').querySelector('img').src : document.getElementById('icon2').textContent,
+      icon3: document.getElementById('icon3').querySelector('img') ? document.getElementById('icon3').querySelector('img').src : document.getElementById('icon3').textContent,
     },
     design: {
       bgColor: document.getElementById('bg-color').value,
@@ -2404,6 +2407,7 @@ function applyState(state) {
     // icons
     const icon1El = document.getElementById('icon1');
     const icon2El = document.getElementById('icon2');
+    const icon3El = document.getElementById('icon3');
     if (f.icon1) {
       if (f.icon1.startsWith('data:') || f.icon1.startsWith('http')) icon1El.innerHTML = `<img src="${f.icon1}" alt="">`;
       else icon1El.textContent = f.icon1;
@@ -2411,6 +2415,10 @@ function applyState(state) {
     if (f.icon2) {
       if (f.icon2.startsWith('data:') || f.icon2.startsWith('http')) icon2El.innerHTML = `<img src="${f.icon2}" alt="">`;
       else icon2El.textContent = f.icon2;
+    }
+    if (f.icon3) {
+      if (f.icon3.startsWith('data:') || f.icon3.startsWith('http')) icon3El.innerHTML = `<img src="${f.icon3}" alt="">`;
+      else icon3El.textContent = f.icon3;
     }
   }
   // 디자인
